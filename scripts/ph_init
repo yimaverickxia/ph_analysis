@@ -1,0 +1,60 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+import argparse
+from ph_analysis.conf_creation import ConfCreation
+
+def main():
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--dim",
+                        nargs=3,
+                        default=[1, 1, 1],
+                        type=int,
+                        help="dimension of supercell")
+    parser.add_argument("--distance",
+                        type=float,
+                        help="atomic displacement distance")
+    parser.add_argument("-l", "--large",
+                        action="store_true",
+                        help="setting for POSCAR of supercell")
+    parser.add_argument("-m", "--magmom",
+                        nargs='+',
+                        type=float,
+                        help="setting for reading magnetic momment")
+    parser.add_argument("--off_symmetry",
+                        action="store_false",
+                        help="set SYMMETRY-tag .FALSE.")
+    parser.add_argument("--pm",
+                        action="store_true",
+                        help="setting for paramagnetic states")
+    parser.add_argument("-i", "--incar",
+                        type=str,
+                        help="input INCAR file")
+    parser.add_argument("-o", "--outcar",
+                        type=str,
+                        help="input OUTCAR file")
+    args = parser.parse_args()
+
+    if args.pm == True:
+        args.large = True
+        args.magmom = True
+
+    # Note that args.large option is old and will be removed.
+    if args.large == True:
+        dim = [1, 1, 1]
+    else:
+        dim = args.dim
+
+    ConfCreation(
+        dim=dim,
+        magmom=args.magmom,
+        incar=args.incar,
+        outcar=args.outcar,
+        distance=args.distance,
+        is_symmetry=args.off_symmetry,
+    ).run()
+
+if __name__ == "__main__":
+    main()
