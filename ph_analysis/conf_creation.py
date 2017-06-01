@@ -13,13 +13,15 @@ class ConfCreation(object):
                  incar=None,
                  outcar=None,
                  distance=None,
-                 is_symmetry=True):
+                 is_symmetry=True,
+                 fc_symmetry=None):
         self._dim = dim
         self._magmom = magmom
         self._incar = incar
         self._outcar = outcar
         self._distance = distance
         self._is_symmetry = is_symmetry
+        self._fc_symmetry = fc_symmetry
 
     def run(self):
         self.create_disp_conf()
@@ -39,6 +41,8 @@ class ConfCreation(object):
             self.write_symmetry(f)
             self.write_dim(f)
             self.write_distance(f)
+            if self._fc_symmetry is not None:
+                self.write_fc_symmetry(f)
             self.write_magmom(f)
 
     def write_magmom(self, f):
@@ -65,6 +69,9 @@ class ConfCreation(object):
     def write_symmetry(self, f):
         if not self._is_symmetry:
             f.write("SYMMETRY = .FALSE.\n")
+
+    def write_fc_symmetry(self, f):
+        f.write("FC_SYMMETRY = {:d}\n".format(self._fc_symmetry))
 
     def write_dim(self, f):
         f.write("DIM = %d %d %d\n" % tuple(self._dim))
