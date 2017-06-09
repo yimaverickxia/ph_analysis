@@ -7,9 +7,9 @@ import numpy as np
 from vasp.poscar_list import PoscarList
 from phonopy.file_IO import parse_FORCE_CONSTANTS, write_FORCE_CONSTANTS
 from phonopy.harmonic.force_constants import symmetrize_force_constants
+from .fc_reorderer import FCReorderer
 
-
-__author__ = "Yuji Ikeda"
+__author__ = 'Yuji Ikeda'
 
 
 class FCAverager(object):
@@ -23,7 +23,7 @@ class FCAverager(object):
         fc_list_tmp = self._extract_fc_list()
         fc_list = []
         for fc, indices in zip(fc_list_tmp, indices_list):
-            fc_reordered = self._reorder_fcs(fc, indices)
+            fc_reordered = FCReorderer().reorder_fcs(fc, indices)
             fc_list.append(fc_reordered)
 
         fc_average = np.average(fc_list, axis=0, weights=self._weights)
@@ -42,14 +42,6 @@ class FCAverager(object):
             symmetrize_force_constants(force_constants)
             fc_list.append(force_constants)
         return fc_list
-
-    @staticmethod
-    def _reorder_fcs(fc, indices):
-        fc_reordered = np.full_like(fc, np.nan)  # Initialized by np.nan to detect possible errors
-        for i1, j1 in enumerate(indices):
-            for i2, j2 in enumerate(indices):
-                fc_reordered[j1, j2] = fc[i1, i2]
-        return fc_reordered
 
     @staticmethod
     def _write_fcs(fc_list, fc_average):
