@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
-import argparse
 import numpy as np
 from vasp.poscar_list import PoscarList
 from phonopy.file_IO import parse_FORCE_CONSTANTS, write_FORCE_CONSTANTS
@@ -18,12 +17,12 @@ class FCAverager(object):
         self._fc_filenames = fc_filenames
         self._weights = weights
 
-    def average_fcs(self):
+    def average_fc(self):
         indices_list = self._extract_indices_list()
         fc_list_tmp = self._extract_fc_list()
         fc_list = []
         for fc, indices in zip(fc_list_tmp, indices_list):
-            fc_reordered = FCReorderer().reorder_fcs(fc, indices)
+            fc_reordered = FCReorderer().reorder_fc(fc, indices)
             fc_list.append(fc_reordered)
 
         fc_average = np.average(fc_list, axis=0, weights=self._weights)
@@ -51,32 +50,3 @@ class FCAverager(object):
 
         filename_write = "FORCE_CONSTANTS_AVERAGE"
         write_FORCE_CONSTANTS(fc_average, filename_write)
-
-
-def main():
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-w", "--weights",
-                        nargs="+",
-                        type=float,
-                        help="Weights for the sets of the force constants.")
-    parser.add_argument("-p", "--poscar",
-                        nargs="+",
-                        type=str,
-                        help="Filenames of POSCAR.")
-    parser.add_argument("-f", "--fc",
-                        nargs="+",
-                        type=str,
-                        help="Filenames of FORCE_CONSTANTS.")
-    args = parser.parse_args()
-
-    if len(args.poscar) != len(args.fc):
-        print("ERROR: {}".format(__name__))
-        print("len(args.poscar) must be equal to len(args.fc).")
-        raise ValueError
-
-    FCAverager(args.poscar, args.fc, args.weights).average_fcs()
-
-
-if __name__ == "__main__":
-    main()
