@@ -2,11 +2,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
+
 import argparse
+
 import numpy as np
 from phonopy.file_IO import parse_FORCE_CONSTANTS, write_FORCE_CONSTANTS
 from vasp.poscar import Poscar
-from ph_analysis.analysis.fc_analyzer_base import FCAnalyzerBase
+
+from .fc_analyzer_base import FCAnalyzerBase
 
 __author__ = 'Yuji Ikeda'
 
