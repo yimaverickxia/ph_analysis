@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function
+
 import sys
 from fractions import Fraction
+
 import numpy as np
 from phonopy.file_IO import parse_FORCE_CONSTANTS, write_FORCE_CONSTANTS
-from phonopy.interface.vasp import read_vasp
-from vasp.poscar import Poscar
-from phonopy.structure.cells import Supercell, Primitive
-from phonopy.harmonic.force_constants import set_permutation_symmetry
 from phonopy.harmonic.dynamical_matrix import get_smallest_vectors
-from ph_analysis.analysis.fc_symmetrizer_spg import FCSymmetrizerSPG
+from phonopy.harmonic.force_constants import set_permutation_symmetry
+from phonopy.interface.vasp import read_vasp
+from phonopy.structure.cells import Supercell, Primitive
+from vasp.poscar import Poscar
+from .fc_symmetrizer_spg import FCSymmetrizerSPG
 from ..structure.configuration_randomizer import ConfigurationRandomizer
 
 __author__ = 'Yuji Ikeda'
