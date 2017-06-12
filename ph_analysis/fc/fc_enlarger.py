@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function
 import sys
-import yaml
 from fractions import Fraction
 import numpy as np
 from phonopy.file_IO import parse_FORCE_CONSTANTS, write_FORCE_CONSTANTS
@@ -12,25 +11,20 @@ from phonopy.structure.cells import Supercell, Primitive
 from phonopy.harmonic.force_constants import set_permutation_symmetry
 from phonopy.harmonic.dynamical_matrix import get_smallest_vectors
 from ph_analysis.analysis.fc_symmetrizer_spg import FCSymmetrizerSPG
-try:
-    from fc_enlarger.configuration_randomizer import ConfigurationRandomizer
-except:
-    from configuration_randomizer import ConfigurationRandomizer
+from ..structure.configuration_randomizer import ConfigurationRandomizer
+
+__author__ = 'Yuji Ikeda'
 
 
-__author__ = "Yuji Ikeda"
-
-
-class ForceConstantsEnlarger(object):
-    def __init__(self, input_file):
-        dict_input = self._read_input(input_file)
+class FCEnlarger(object):
+    def __init__(self, dict_input=None):
+        dict_input = self._read_input(dict_input)
         self._configure(dict_input)
         self.print_info()
 
-    def _read_input(self, input_file):
+    def _read_input(self, tmp):
         dict_input = get_default_input()
 
-        tmp = yaml.load(open(input_file, "r"))
         if tmp is not None:
             dict_input.update(tmp)
 
@@ -45,7 +39,7 @@ class ForceConstantsEnlarger(object):
         self._atoms_disordered = read_vasp(dict_input["structure_disordered"])
         self._atoms_average = read_vasp(dict_input["structure_average"])
         self._symprec = dict_input["symprec"]
-        self._replacements = dict_input["replacements"]
+        self._map_s2s = dict_input["map_s2s"]
 
         self._random_seed = dict_input["random_seed"]
         self._num_configurations = dict_input['num_configurations']
@@ -91,7 +85,6 @@ class ForceConstantsEnlarger(object):
         print("Creating an enlarged force constants: ", end="")
         self.generate_enlarged_force_constants()
         print("Finished.")
-        self.write()
 
     def check_atoms_correspondence(self):
         """Check the correspondence of the atomic positions.
@@ -171,32 +164,32 @@ class ForceConstantsEnlarger(object):
         If The tag "replacements" is not given, we just copy the original
         structure as the enlarged cell.
         """
-        if self._replacements is not None:
+        if self._map_s2s is not None:
             self._enlarged_cell_average = Supercell(
                 self._primitive_average,
                 self._enlargement_matrix,
                 symprec=self._symprec)
-            self._disorder_enlarged_cell()
+            self._enlarged_cell = self._disorder_enlarged_cell()
         else:
-            import copy
+            enlargement_matrix = np.eye(3, dtype=int)
+            self._enlarged_cell_average = self._atoms_average
             self._enlarged_cell = Supercell(
                 self._atoms_disordered,
-                self._enlargement_matrix,
+                enlargement_matrix,
                 symprec=self._symprec)
-            self._enlarged_cell_average = copy.deepcopy(self._enlarged_cell)
         return self
 
     def _disorder_enlarged_cell(self):
         configuration_randomizer = ConfigurationRandomizer(
             atoms=self._enlarged_cell_average,
-            map_s2s=self._replacements,
+            map_s2s=self._map_s2s,
             random_seed=self._random_seed)
 
         for i in range(self._num_configurations):
-            self._enlarged_cell = (
-                configuration_randomizer.create_randomized_configuration())
+            tmp = configuration_randomizer.create_randomized_configuration()
+        enlarged_cell = tmp
 
-        return self
+        return enlarged_cell
 
     def generate_enlarged_force_constants(self):
         """
@@ -225,23 +218,21 @@ class ForceConstantsEnlarger(object):
 
         set_permutation_symmetry(enlarged_force_constants)
         set_translational_invariance_for_diagonal(enlarged_force_constants)
-        self._enlarged_force_constants = enlarged_force_constants
+        self._fc_enlarged = enlarged_force_constants
 
-    def write(self):
-        """
+    def write_cell_enlarged(self, filename):
+        poscar = Poscar()
+        poscar.set_atoms(self._enlarged_cell)
+        poscar.write(filename)
 
-        POSCAR_sc_d: The supercell of the disordered structure. This
-            corresponds to the original force constants. This should be the
-            same as SPOSCAR for phonopy.
-        """
-        # write_vasp("POSCAR_sc_d", self._supercell_disordered)
-        # write_vasp("POSCAR_enlarged", self._enlarged_cell)
-        Poscar().set_atoms(self._supercell_disordered).write("POSCAR_sc_d")
-        Poscar().set_atoms(self._enlarged_cell).write("POSCAR_enlarged")
-        Poscar().set_atoms(self._enlarged_cell_average).write("POSCAR_enlarged_average")
-        write_FORCE_CONSTANTS(
-            self._enlarged_force_constants,
-            filename="FORCE_CONSTANTS_enlarged")
+    def write_cell_enlarged_ideal(self, filename):
+        poscar = Poscar()
+        poscar.set_atoms(self._enlarged_cell_average)
+        poscar.write(filename)
+
+    def write_fc_enlarged(self, filename):
+        fc = self._fc_enlarged
+        write_FORCE_CONSTANTS(fc, filename)
 
 
 def get_default_input():
@@ -257,9 +248,9 @@ def get_default_input():
     """
     default_input = {
         "force_constants": "FORCE_CONSTANTS_orig",
-        "structure_disordered": "POSCAR",
-        "structure_average": "POSCAR_average",
-        "replacements": None,
+        "structure_disordered": "POSCAR_orig",
+        "structure_average": "POSCAR_orig_ideal",
+        "map_s2s": None,
         "random_seed": None,
         'num_configurations': 1,
         "primitive_matrix": np.eye(3),
@@ -320,7 +311,10 @@ def set_translational_invariance_for_diagonal(force_constants):
 
 
 def main():
-    ForceConstantsEnlarger(sys.argv[1]).run()
+    import yaml
+    dict_input = yaml.load(sys.argv[1])
+    fc_enlarger = FCEnlarger(dict_input)
+    fc_enlarger.run()
 
 
 if __name__ == "__main__":
