@@ -35,6 +35,8 @@ class FCCreator(object):
         it might be better to use initial atomic positions to use the
         symmetry of the structure (POSCAR_initial).
         """
+        from phonopy.structure.atoms import symbol_map
+        symbol_map['X'] = 0
         directory_data = self._directory_data
         symlink_force(directory_data + self._poscar_filename, "POSCAR")
         poscar = Poscar("POSCAR")
