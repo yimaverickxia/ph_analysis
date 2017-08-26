@@ -16,7 +16,7 @@ def group_into_symbols(symbols, values_atom):
     return values_symbol
 
 
-class Voronoi(object):
+class VolumeMesh(object):
     def __init__(self, atoms, mesh):
         self._atoms = atoms
         self._mesh = mesh
@@ -40,7 +40,7 @@ class Voronoi(object):
         cell = atoms.get_cell()
         num_atoms = atoms.get_number_of_atoms()
         atomic_positions = atoms.get_scaled_positions()
-        volume_atom = np.zeros(num_atoms)
+        volumes_atom = np.zeros(num_atoms)
 
         get_distances = self._get_distances1
 
@@ -67,26 +67,26 @@ class Voronoi(object):
                     weight += 1
 
             for ia in atoms_close:
-                volume_atom[ia] += 1.0 / float(weight)
+                volumes_atom[ia] += 1.0 / float(weight)
 
-        volume_atom /= np.product(mesh)
+        volumes_atom /= np.product(mesh)
 
-        self._volume_atom = volume_atom * np.linalg.det(cell)
+        self._volumes_atom = volumes_atom * np.linalg.det(cell)
 
         self.generate_values_for_symbols()
 
     def generate_values_for_symbols(self):
         symbols = self._atoms.get_chemical_symbols()
-        volume_atom = self._volume_atom
+        volumes_atom = self._volumes_atom
 
-        volume_symbol = group_into_symbols(symbols, volume_atom)
+        volumes_symbol = group_into_symbols(symbols, volumes_atom)
 
-        self._volume_symbol = volume_symbol
+        self._volumes_symbol = volumes_symbol
 
     def write_atomic_volume(self):
         symbols = self._atoms.get_chemical_symbols()
-        volume_atom = self._volume_atom
-        volume_symbol = self._volume_symbol
+        volumes_atom = self._volumes_atom
+        volumes_symbol = self._volumes_symbol
         filename = self._filename
 
         with open(filename, "w") as f:
@@ -98,7 +98,7 @@ class Voronoi(object):
                 f.write("atom")
                 # f.write(" {:11d} {:5s}{:18.12f}{:18.12f}".format(i, s, ct, cs))
                 f.write(" {:11d} {:5s}".format(i, s))
-                f.write("{:18.12f}".format(self._volume_atom[i]))
+                f.write("{:18.12f}".format(self._volumes_atom[i]))
                 f.write("\n")
             f.write("\n")
 
@@ -136,12 +136,12 @@ class Voronoi(object):
                 f.write("\n")
 
             properties = [
-                volume_atom,
+                volumes_atom,
             ]
             write_statistics(properties)
             for s in sorted(set(symbols), key=symbols.index):
                 properties = [
-                    volume_symbol[s],
+                    volumes_symbol[s],
                 ]
                 write_statistics(properties, s)
 
@@ -164,7 +164,7 @@ def main():
                         help="mesh")
     args = parser.parse_args()
     atoms = read_vasp(args.atoms)
-    Voronoi(atoms, args.mesh).run()
+    VolumeMesh(atoms, args.mesh).run()
 
 if __name__ == '__main__':
     main()
