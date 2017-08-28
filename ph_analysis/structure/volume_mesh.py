@@ -51,9 +51,7 @@ class VolumeMesh(Volume):
 
         volumes_atom /= np.product(mesh)
 
-        self._volumes_atom = volumes_atom * np.linalg.det(cell)
-
-        self.generate_values_for_symbols()
+        self._data['volume'] = volumes_atom * np.linalg.det(cell)
 
     def _create_header(self):
         return '# {} {} {}\n'.format(*self._mesh)

@@ -3,17 +3,10 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 import numpy as np
+import pandas as pd
 
 __author__ = 'Yuji Ikeda'
 __version__ = '0.1.0'
-
-
-def group_into_symbols(symbols, values_atom):
-    values_symbol = {}
-    for s in sorted(set(symbols), key=symbols.index):
-        indices = [ia for ia in range(len(symbols)) if symbols[ia] == s]
-        values_symbol[s] = values_atom[indices]
-    return values_symbol
 
 
 class Volume(object):
@@ -21,6 +14,13 @@ class Volume(object):
         self._atoms = atoms
         self._volumes_atom = None
         self._volumes_symbol = None
+        self._initialize_data()
+
+    def _initialize_data(self):
+        data = pd.DataFrame()
+        data['symbol'] = self._atoms.get_chemical_symbols()
+        data['atom'] = ''
+        self._data = data
 
     def run(self):
         self.generate_atomic_volume()
@@ -37,74 +37,51 @@ class Volume(object):
     def generate_atomic_volume(self, prec=1e-6):
         raise NotImplementedError
 
-    def generate_values_for_symbols(self):
-        symbols = self._atoms.get_chemical_symbols()
-        volumes_atom = self._volumes_atom
-
-        volumes_symbol = group_into_symbols(symbols, volumes_atom)
-
-        self._volumes_symbol = volumes_symbol
-
     def write_atomic_volume(self):
-        symbols = self._atoms.get_chemical_symbols()
-        volumes_atom = self._volumes_atom
-        volumes_symbol = self._volumes_symbol
         filename = self._create_filename()
+        data = self._data
+
+        functions = [
+            ('sum', np.sum),
+            ('avg.', np.average),
+            ('s.d.', lambda x: np.std(x, ddof=0)),
+            ('abs._sum', lambda x: np.sum(np.abs(x))),
+            ('abs._avg.', lambda x: np.average(np.abs(x))),
+            ('abs._s.d.', lambda x: np.std(np.abs(x), ddof=0)),
+        ]
 
         with open(filename, "w") as f:
             f.write(self._create_header())
-            f.write("#" + " " * 21)
-            f.write("{:18s}".format("Voronoi_volume"))
-            f.write("\n")
-            for i, s in enumerate(symbols):
-                f.write("atom")
-                f.write(" {:11d} {:5s}".format(i, s))
-                f.write("{:18.12f}".format(self._volumes_atom[i]))
-                f.write("\n")
-            f.write("\n")
+            f.write('{:<22s}{:<18s}'.format('#', 'Voronoi_volume'))
+            f.write('\n')
+            for i, x in data.iterrows():
+                f.write('atom ')
+                f.write('{:11d}'.format(i))
+                f.write(' {:5s}'.format(x['symbol']))
+                f.write('{:18.12f}'.format(x['volume']))
+                f.write('\n')
 
-            def write_statistics(values, symbol=""):
-                f.write("{:16s} {:5s}".format("sum", symbol))
-                for v in values:
-                    f.write("%18.12f" % (np.sum(v)))
-                f.write("\n")
+            f.write('\n')
 
-                f.write("{:16s} {:5s}".format("average", symbol))
-                for v in values:
-                    f.write("%18.12f" % (np.average(v)))
-                f.write("\n")
+            # Write statistics for all atoms
+            data_stat = data.groupby('atom', sort=False).agg(functions)
+            for k0, x in data_stat.iterrows():
+                for k1, v in x.iteritems():
+                    f.write('{:16}'.format(k1[1]))
+                    f.write(' {:5s}'.format(k0))
+                    f.write('{:18.12f}'.format(v))
+                    f.write('\n')
+                f.write('\n')
 
-                f.write("{:16s} {:5s}".format("s.d.", symbol))
-                for v in values:
-                    f.write("%18.12f" % (np.std(v)))
-                f.write("\n")
-
-                f.write("{:16s} {:5s}".format("absolute_sum", symbol))
-                for v in values:
-                    f.write("%18.12f" % (np.sum(abs(v))))
-                f.write("\n")
-
-                f.write("{:16s} {:5s}".format("absolute_average", symbol))
-                for v in values:
-                    f.write("%18.12f" % (np.average(abs(v))))
-                f.write("\n")
-
-                f.write("{:16s} {:5s}".format("absolute_s.d.", symbol))
-                for v in values:
-                    f.write("%18.12f" % (np.std(abs(v))))
-                f.write("\n")
-
-                f.write("\n")
-
-            properties = [
-                volumes_atom,
-            ]
-            write_statistics(properties)
-            for s in sorted(set(symbols), key=symbols.index):
-                properties = [
-                    volumes_symbol[s],
-                ]
-                write_statistics(properties, s)
+            # Write statistics for each symbol
+            data_stat = data.groupby('symbol', sort=False).agg(functions)
+            for k0, x in data_stat.iterrows():
+                for k1, v in x.iteritems():
+                    f.write('{:16s}'.format(k1[1]))
+                    f.write(' {:5s}'.format(k0))
+                    f.write('{:18.12f}'.format(v))
+                    f.write('\n')
+                f.write('\n')
 
     def _create_header(self):
         raise NotImplementedError
@@ -112,5 +89,5 @@ class Volume(object):
     def _create_filename(self):
         raise NotImplementedError
 
-    def get_volumes_atom(self):
-        return self._volumes_atom
+    def get_data(self):
+        return self._data

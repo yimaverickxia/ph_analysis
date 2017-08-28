@@ -70,9 +70,7 @@ class VolumeVoronoi(Volume):
             else:
                 raise ValueError('Region includes infinite point')
 
-        self._volumes_atom = volumes_atom
-
-        self.generate_values_for_symbols()
+        self._data['volume'] = volumes_atom
 
     def _create_header(self):
         return ''
