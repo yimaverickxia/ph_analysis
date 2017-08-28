@@ -20,6 +20,18 @@ def create_statistical_functions():
     ]
 
 
+def create_data_stat(data, keys, properties):
+    """
+
+    :param data: pandas.DataFrame
+    :param keys: List of strings
+    :param properties: List of strings
+    :return:
+    """
+    functions = create_statistical_functions()
+    return data.groupby(keys, sort=False).agg(functions)[properties]
+
+
 class Volume(object):
     def __init__(self, atoms):
         self._atoms = atoms
@@ -31,6 +43,7 @@ class Volume(object):
         data = pd.DataFrame()
         data['symbol'] = self._atoms.get_chemical_symbols()
         data['atom'] = ''
+        data = data.reset_index()  # data['index'] is created
         self._data = data
 
     def run(self):
@@ -52,7 +65,7 @@ class Volume(object):
         filename = self._create_filename()
         data = self._data
 
-        functions = create_statistical_functions()
+        properties = ['volume']
 
         with open(filename, "w") as f:
             f.write(self._create_header())
@@ -60,7 +73,7 @@ class Volume(object):
             f.write('\n')
             for i, x in data.iterrows():
                 f.write('atom ')
-                f.write('{:11d}'.format(i))
+                f.write('{:11d}'.format(x['index']))
                 f.write(' {:5s}'.format(x['symbol']))
                 f.write('{:18.12f}'.format(x['volume']))
                 f.write('\n')
@@ -68,7 +81,7 @@ class Volume(object):
             f.write('\n')
 
             # Write statistics for all atoms
-            data_stat = data.groupby('atom', sort=False).agg(functions)
+            data_stat = create_data_stat(data, 'atom', properties)
             for k0, x in data_stat.iterrows():
                 for k1, v in x.iteritems():
                     f.write('{:16}'.format(k1[1]))
@@ -78,7 +91,7 @@ class Volume(object):
                 f.write('\n')
 
             # Write statistics for each symbol
-            data_stat = data.groupby('symbol', sort=False).agg(functions)
+            data_stat = create_data_stat(data, 'symbol', properties)
             for k0, x in data_stat.iterrows():
                 for k1, v in x.iteritems():
                     f.write('{:16s}'.format(k1[1]))
