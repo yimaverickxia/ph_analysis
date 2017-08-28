@@ -2,13 +2,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
-
 import argparse
-
 import numpy as np
 from phonopy.file_IO import parse_FORCE_CONSTANTS, write_FORCE_CONSTANTS
 from vasp.poscar import Poscar
-
 from .fc_analyzer_base import FCAnalyzerBase
 
 __author__ = 'Yuji Ikeda'
@@ -112,6 +109,54 @@ class FCReducer(object):
 
         self._fc_reduced = force_constants
         self.do_postprocess()
+
+    def average_FCs_for_positions(self, positions):
+        """
+
+        Parameters
+        ----------
+        positions: n x 2 x 3 array
+            positions = np.array([
+                [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]],
+            ])
+        """
+        poscar = self._poscar
+        force_constants = np.copy(self._force_constants)
+        force_constants_spg = self._create_fc_symmetrized_spg()
+
+        positions = np.array(positions)
+
+        indices_all = self.find_indices_from_positions(positions)
+        print('indices_all:', indices_all)
+
+        mappings = poscar.get_mappings_for_symops()
+        for mapping in mappings:
+            for indices_combination in indices_all:
+                indices_removed = mapping[indices_combination]
+                i0 = indices_removed[0]
+                i1 = indices_removed[1]
+                force_constants[i0, i1] = force_constants_spg[i0, i1]
+                force_constants[i1, i0] = force_constants_spg[i1, i0]
+
+        self._fc_reduced = force_constants
+        self.do_postprocess()
+
+    def _create_fc_symmetrized_spg(self):
+        from .fc_symmetrizer_spg import FCSymmetrizerSPG
+
+        force_constants = self._force_constants
+        atoms_ideal = self._poscar.get_atoms()
+
+        fc_symmetrizer_spg = FCSymmetrizerSPG(
+            force_constants=force_constants,
+            atoms=atoms_ideal,
+            atoms_ideal=atoms_ideal,
+            is_symmetrized=False)
+
+        fc_symmetrizer_spg.average_force_constants_spg()
+        fc_spg = fc_symmetrizer_spg.get_force_constants_symmetrized()
+
+        return fc_spg
 
 
 def main():
