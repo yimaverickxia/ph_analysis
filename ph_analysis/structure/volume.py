@@ -9,6 +9,17 @@ __author__ = 'Yuji Ikeda'
 __version__ = '0.1.0'
 
 
+def create_statistical_functions():
+    return [
+        ('sum', np.sum),
+        ('avg.', np.average),
+        ('s.d.', lambda x: np.std(x, ddof=0)),
+        ('abs._sum', lambda x: np.sum(np.abs(x))),
+        ('abs._avg.', lambda x: np.average(np.abs(x))),
+        ('abs._s.d.', lambda x: np.std(np.abs(x), ddof=0)),
+    ]
+
+
 class Volume(object):
     def __init__(self, atoms):
         self._atoms = atoms
@@ -41,14 +52,7 @@ class Volume(object):
         filename = self._create_filename()
         data = self._data
 
-        functions = [
-            ('sum', np.sum),
-            ('avg.', np.average),
-            ('s.d.', lambda x: np.std(x, ddof=0)),
-            ('abs._sum', lambda x: np.sum(np.abs(x))),
-            ('abs._avg.', lambda x: np.average(np.abs(x))),
-            ('abs._s.d.', lambda x: np.std(np.abs(x), ddof=0)),
-        ]
+        functions = create_statistical_functions()
 
         with open(filename, "w") as f:
             f.write(self._create_header())
