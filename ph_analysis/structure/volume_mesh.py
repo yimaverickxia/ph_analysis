@@ -18,9 +18,9 @@ class VolumeMesh(Volume):
         atoms = self._atoms
         mesh = self._mesh
         cell = atoms.get_cell()
-        num_atoms = atoms.get_number_of_atoms()
+        natoms = atoms.get_number_of_atoms()
         atomic_positions = atoms.get_scaled_positions()
-        volumes_atom = np.zeros(num_atoms)
+        volumes_atom = np.zeros(natoms)
 
         get_distances = self._get_distances1
 
@@ -41,7 +41,7 @@ class VolumeMesh(Volume):
             distance_min = min(distance)
             atoms_close = []
             weight = 0
-            for ia in range(num_atoms):
+            for ia in range(natoms):
                 if distance[ia] - distance_min < prec:
                     atoms_close.append(ia)
                     weight += 1
@@ -55,66 +55,8 @@ class VolumeMesh(Volume):
 
         self.generate_values_for_symbols()
 
-    def write_atomic_volume(self):
-        symbols = self._atoms.get_chemical_symbols()
-        volumes_atom = self._volumes_atom
-        volumes_symbol = self._volumes_symbol
-        filename = self._create_filename()
-
-        with open(filename, "w") as f:
-            f.write("# {} {} {}\n".format(*self._mesh))
-            f.write("#" + " " * 21)
-            f.write("{:18s}".format("Voronoi_volume"))
-            f.write("\n")
-            for i, s in enumerate(symbols):
-                f.write("atom")
-                f.write(" {:11d} {:5s}".format(i, s))
-                f.write("{:18.12f}".format(self._volumes_atom[i]))
-                f.write("\n")
-            f.write("\n")
-
-            def write_statistics(values, symbol=""):
-                f.write("{:16s} {:5s}".format("sum", symbol))
-                for v in values:
-                    f.write("%18.12f" % (np.sum(v)))
-                f.write("\n")
-
-                f.write("{:16s} {:5s}".format("average", symbol))
-                for v in values:
-                    f.write("%18.12f" % (np.average(v)))
-                f.write("\n")
-
-                f.write("{:16s} {:5s}".format("s.d.", symbol))
-                for v in values:
-                    f.write("%18.12f" % (np.std(v)))
-                f.write("\n")
-
-                f.write("{:16s} {:5s}".format("absolute_sum", symbol))
-                for v in values:
-                    f.write("%18.12f" % (np.sum(abs(v))))
-                f.write("\n")
-
-                f.write("{:16s} {:5s}".format("absolute_average", symbol))
-                for v in values:
-                    f.write("%18.12f" % (np.average(abs(v))))
-                f.write("\n")
-
-                f.write("{:16s} {:5s}".format("absolute_s.d.", symbol))
-                for v in values:
-                    f.write("%18.12f" % (np.std(abs(v))))
-                f.write("\n")
-
-                f.write("\n")
-
-            properties = [
-                volumes_atom,
-            ]
-            write_statistics(properties)
-            for s in sorted(set(symbols), key=symbols.index):
-                properties = [
-                    volumes_symbol[s],
-                ]
-                write_statistics(properties, s)
+    def _create_header(self):
+        return '# {} {} {}\n'.format(*self._mesh)
 
     def _create_filename(self):
         return 'atomic_volume_{}_{}_{}.dat'.format(*self._mesh)
