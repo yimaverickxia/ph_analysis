@@ -3,36 +3,16 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 import numpy as np
+from .volume import Volume
 
 __author__ = 'Yuji Ikeda'
 __version__ = '0.1.0'
 
 
-def group_into_symbols(symbols, values_atom):
-    values_symbol = {}
-    for s in sorted(set(symbols), key=symbols.index):
-        indices = [ia for ia in range(len(symbols)) if symbols[ia] == s]
-        values_symbol[s] = values_atom[indices]
-    return values_symbol
-
-
-class VolumeMesh(object):
+class VolumeMesh(Volume):
     def __init__(self, atoms, mesh):
-        self._atoms = atoms
+        super(VolumeMesh, self).__init__(atoms)
         self._mesh = mesh
-        self.create_filename()
-
-    def run(self):
-        self.generate_atomic_volume()
-        self.write_atomic_volume()
-
-    def _get_distances1(self, rpos):
-        cell = self._atoms.get_cell()
-        rpos = np.dot(rpos, cell)
-        distances = (rpos[:, 0] * rpos[:, 0] +
-                     rpos[:, 1] * rpos[:, 1] +
-                     rpos[:, 2] * rpos[:, 2])
-        return np.sqrt(distances)
 
     def generate_atomic_volume(self, prec=1e-6):
         atoms = self._atoms
@@ -75,19 +55,11 @@ class VolumeMesh(object):
 
         self.generate_values_for_symbols()
 
-    def generate_values_for_symbols(self):
-        symbols = self._atoms.get_chemical_symbols()
-        volumes_atom = self._volumes_atom
-
-        volumes_symbol = group_into_symbols(symbols, volumes_atom)
-
-        self._volumes_symbol = volumes_symbol
-
     def write_atomic_volume(self):
         symbols = self._atoms.get_chemical_symbols()
         volumes_atom = self._volumes_atom
         volumes_symbol = self._volumes_symbol
-        filename = self._filename
+        filename = self._create_filename()
 
         with open(filename, "w") as f:
             f.write("# {} {} {}\n".format(*self._mesh))
@@ -96,7 +68,6 @@ class VolumeMesh(object):
             f.write("\n")
             for i, s in enumerate(symbols):
                 f.write("atom")
-                # f.write(" {:11d} {:5s}{:18.12f}{:18.12f}".format(i, s, ct, cs))
                 f.write(" {:11d} {:5s}".format(i, s))
                 f.write("{:18.12f}".format(self._volumes_atom[i]))
                 f.write("\n")
@@ -145,8 +116,8 @@ class VolumeMesh(object):
                 ]
                 write_statistics(properties, s)
 
-    def create_filename(self):
-        self._filename = 'atomic_volume_{}_{}_{}.dat'.format(*self._mesh)
+    def _create_filename(self):
+        return 'atomic_volume_{}_{}_{}.dat'.format(*self._mesh)
 
 
 def main():
@@ -168,4 +139,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

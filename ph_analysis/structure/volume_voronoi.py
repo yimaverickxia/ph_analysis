@@ -4,36 +4,13 @@ from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 import numpy as np
 from scipy.spatial import ConvexHull, Voronoi
+from .volume import Volume
 
 __author__ = 'Yuji Ikeda'
 __version__ = '0.1.0'
 
 
-def group_into_symbols(symbols, values_atom):
-    values_symbol = {}
-    for s in sorted(set(symbols), key=symbols.index):
-        indices = [ia for ia in range(len(symbols)) if symbols[ia] == s]
-        values_symbol[s] = values_atom[indices]
-    return values_symbol
-
-
-class VolumeVoronoi(object):
-    def __init__(self, atoms):
-        self._atoms = atoms
-        self.create_filename()
-
-    def run(self):
-        self.generate_atomic_volume()
-        self.write_atomic_volume()
-
-    def _get_distances1(self, rpos):
-        cell = self._atoms.get_cell()
-        rpos = np.dot(rpos, cell)
-        distances = (rpos[:, 0] * rpos[:, 0] +
-                     rpos[:, 1] * rpos[:, 1] +
-                     rpos[:, 2] * rpos[:, 2])
-        return np.sqrt(distances)
-
+class VolumeVoronoi(Volume):
     def generate_atomic_volume(self, prec=1e-6):
         atoms = self._atoms
         cell = atoms.get_cell()
@@ -97,19 +74,11 @@ class VolumeVoronoi(object):
 
         self.generate_values_for_symbols()
 
-    def generate_values_for_symbols(self):
-        symbols = self._atoms.get_chemical_symbols()
-        volumes_atom = self._volumes_atom
-
-        volumes_symbol = group_into_symbols(symbols, volumes_atom)
-
-        self._volumes_symbol = volumes_symbol
-
     def write_atomic_volume(self):
         symbols = self._atoms.get_chemical_symbols()
         volumes_atom = self._volumes_atom
         volumes_symbol = self._volumes_symbol
-        filename = self._filename
+        filename = self._create_filename()
 
         with open(filename, "w") as f:
             f.write("#" + " " * 21)
@@ -165,8 +134,8 @@ class VolumeVoronoi(object):
                 ]
                 write_statistics(properties, s)
 
-    def create_filename(self):
-        self._filename = 'atomic_volume.dat'
+    def _create_filename(self):
+        return 'atomic_volume.dat'
 
 
 def main():
@@ -182,4 +151,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
