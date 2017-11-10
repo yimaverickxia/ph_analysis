@@ -20,9 +20,9 @@ class VolumeList(object):
     def _initialize_data(self):
         self._data = pd.DataFrame()
 
-    def run(self):
+    def run(self, sort):
         self.generate_atomic_volume()
-        self.write_atomic_volume()
+        self.write_atomic_volume(sort)
 
     def generate_atomic_volume(self):
         data_list = []
@@ -35,7 +35,7 @@ class VolumeList(object):
             data_list.append(data_tmp)
         self._data = pd.concat(data_list, ignore_index=True)
 
-    def write_atomic_volume(self):
+    def write_atomic_volume(self, sort=False):
         filename = self._create_filename()
         data = self._data
 
@@ -58,7 +58,7 @@ class VolumeList(object):
             f.write('\n')
 
             # Write statistics for all atoms
-            data_stat = create_data_stat(data, 'atom', properties)
+            data_stat = create_data_stat(data, 'atom', properties, sort)
             for k0, x in data_stat.iterrows():
                 for k1, v in x.iteritems():
                     f.write('{:10s}'.format(k1[1]))
@@ -70,7 +70,7 @@ class VolumeList(object):
                 f.write('\n')
 
             # Write statistics for each symbol
-            data_stat = create_data_stat(data, 'symbol', properties)
+            data_stat = create_data_stat(data, 'symbol', properties, sort)
             for k0, x in data_stat.iterrows():
                 for k1, v in x.iteritems():
                     f.write('{:10s}'.format(k1[1]))
@@ -83,7 +83,7 @@ class VolumeList(object):
 
             # Write statistics for each structure
             keys = ['structure']
-            data_stat = create_data_stat(data, keys, properties)
+            data_stat = create_data_stat(data, keys, properties, sort)
             for k0, x in data_stat.iterrows():
                 for k1, v in x.iteritems():
                     f.write('{:10s}'.format(k1[1]))
@@ -96,7 +96,7 @@ class VolumeList(object):
 
             # Write statistics for each symbol
             keys = ['structure', 'symbol']
-            data_stat = create_data_stat(data, keys, properties)
+            data_stat = create_data_stat(data, keys, properties, sort)
             for k0, x in data_stat.iterrows():
                 for k1, v in x.iteritems():
                     f.write('{:10s}'.format(k1[1]))

@@ -54,6 +54,7 @@ class SAD(object):
         positions = self._atoms.get_scaled_positions()
         positions_ideal = self._atoms_ideal.get_scaled_positions()
         diff = positions - positions_ideal
+        diff -= np.rint(diff)
         return np.average(diff, axis=0)
 
     def calculate_sad(self):
@@ -65,13 +66,13 @@ class SAD(object):
         positions = atoms.get_scaled_positions()
         positions_ideal = atoms_ideal.get_scaled_positions()
         diff = positions - (positions_ideal + origin)
+        diff -= np.rint(diff)
         diff = np.dot(diff, atoms.get_cell())  # frac -> A
         sad = np.sum(diff ** 2, axis=1)
 
         self._data['sad'] = sad
 
     def write(self):
-        symbols = self._atoms.get_chemical_symbols()
         filename = self._create_filename()
         data = self._data
 

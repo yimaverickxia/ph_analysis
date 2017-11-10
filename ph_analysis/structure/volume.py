@@ -20,7 +20,7 @@ def create_statistical_functions():
     ]
 
 
-def create_data_stat(data, keys, properties):
+def create_data_stat(data, keys, properties, sort=False):
     """
 
     :param data: pandas.DataFrame
@@ -29,7 +29,7 @@ def create_data_stat(data, keys, properties):
     :return:
     """
     functions = create_statistical_functions()
-    return data.groupby(keys, sort=False).agg(functions)[properties]
+    return data.groupby(keys, sort=sort).agg(functions)[properties]
 
 
 class Volume(object):

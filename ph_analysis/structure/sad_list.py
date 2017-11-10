@@ -38,7 +38,7 @@ class SADList(object):
 
         properties = ['sad']
 
-        headers = ['', 'str.', 'index', 'symb.', 'volume']
+        headers = ['', 'str.', 'index', 'symb.', 'sad']
         with open(filename, "w") as f:
             f.write(self._create_header())
             f.write('{:<10s} {:<5s} {:<5s} {:<5s} {:<18s}'.format(
