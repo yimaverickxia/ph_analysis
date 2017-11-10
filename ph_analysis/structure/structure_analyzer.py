@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function
-
-__author__ = "Yuji Ikeda"
-
 import sys
 import itertools
+import six
 import numpy as np
+from phonopy.structure.atoms import Atoms
 from phonopy.structure.symmetry import Symmetry
+
+__author__ = "Yuji Ikeda"
 
 
 class StructureAnalyzer(object):
@@ -53,6 +54,67 @@ class StructureAnalyzer(object):
             "spg_number": symmetry_dataset["number"],
             "spg_international": symmetry_dataset["international"],
         })
+
+    def calculate_radial_distribution_functions(
+            self,
+            sigma=0.1,
+            xmin=0.0,
+            xmax=3.0,
+            xpitch=0.01):
+        from ph_unfolder.analysis.smearing import Smearing
+
+        self.generate_supercell(dim=2)
+
+        print("Warning: this method is under developping!")
+        # TODO(ikeda): Consider atoms over boundaries
+        atoms = self._atoms
+        cell = atoms.get_cell()
+        natoms = atoms.get_number_of_atoms()
+        density = natoms / np.linalg.det(cell)
+        scaled_positions = atoms.get_scaled_positions()
+        print("Calculating distance matrix:", end="")
+        self.generate_distance_matrix()
+        print(" Finished.")
+        distance_matrix = self.get_distance_matrix()
+        smearing = Smearing(sigma=sigma, xmin=xmin, xmax=xmax, xpitch=xpitch)
+        xs = smearing.get_xs()
+        rdfs = []
+        for distances in distance_matrix:
+            distances = np.sort(distances)[1:]  # To avoid the same atom
+            weights = 1.0 / (4.0 * np.pi * distances ** 2)
+            rdf = smearing.run(peaks=distances, weights=weights)
+            rdfs.append(rdf)
+        rdfs = np.array(rdfs)
+        rdfs /= density
+        return xs, rdfs
+
+    def calculate_distances_from_position(self, position_checked):
+        """
+
+        Args:
+            position: Scaled positions from which the distances are measured.
+        """
+        cell = self._atoms.get_cell()
+        scaled_positions = self._atoms.get_scaled_positions()
+        number_of_atoms = self._atoms.get_number_of_atoms()
+
+        expansion = range(-1, 2)
+        distances = np.zeros(number_of_atoms) * np.nan
+        scaled_distances = np.zeros((number_of_atoms, 3)) * np.nan
+        for i2, p2 in enumerate(scaled_positions):
+            distance = np.inf
+            for addition in itertools.product(expansion, repeat=3):
+                scaled_distance_new = p2 - position_checked
+                scaled_distance_new -= np.rint(scaled_distance_new)
+                scaled_distance_new += addition
+                distance_new = np.linalg.norm(
+                    np.dot(cell.T, scaled_distance_new))
+                if distance > distance_new:
+                    distance = distance_new
+                    scaled_distance = scaled_distance_new
+            distances[i2] = distance
+            scaled_distances[i2] = scaled_distance
+        return distances, scaled_distances
 
     def generate_distance_matrix(self):
 
@@ -126,7 +188,7 @@ class StructureAnalyzer(object):
                         value,
                         width=width,
                         precision=precision,))
-            elif isinstance(value, (int, long)):
+            elif isinstance(value, six.integer_types):
                 sys.stdout.write(
                     "{:{width}d}".format(
                         value,
@@ -149,7 +211,7 @@ class StructureAnalyzer(object):
                         value,
                         width=width,
                         precision=precision,))
-            elif isinstance(value, (int, long)):
+            elif isinstance(value, six.integer_types):
                 sys.stdout.write(
                     "{:{width}d}".format(
                         value,
@@ -331,22 +393,21 @@ class StructureAnalyzer(object):
         (a_s, b_s, c_s) = (a_u, b_u, c_u) * dim
         """
         dim = _get_matrix(dim)
+        nexpansion = np.int(np.rint(np.abs(np.linalg.det(dim))))
 
         # Generate lattice vectors for the suprecell.
         cell = self._atoms.get_cell()
         cell = np.dot(cell.T, dim).T
-        self._atoms.set_cell(cell)
 
-        self._generate_supercell_positions(dim, prec)
-
-        nexpansion = np.rint(np.abs(np.linalg.det(dim)))
         chemical_symbols_new = []
         for chemical_symbol in self._atoms.get_chemical_symbols():
             chemical_symbols_new += [chemical_symbol] * nexpansion
-        self._atoms.set_chemical_symbols(chemical_symbols_new)
-        self._atoms._symbols_to_numbers()
-        self._atoms._symbols_to_masses()
 
+        supercell_positions = self._generate_supercell_positions(dim, prec)
+
+        self._atoms = Atoms(cell=cell,
+                            symbols=chemical_symbols_new,
+                            scaled_positions=supercell_positions)
         self.update_attributes()
 
         return self
@@ -363,7 +424,7 @@ class StructureAnalyzer(object):
         supercell_positions = (positions[:, None] +
                                translation_vectors[None, :])
         supercell_positions = supercell_positions.reshape(-1, 3)
-        self.set_scaled_positions(supercell_positions)
+        return supercell_positions
 
     def sort_by_coordinates(self, index, sorted_by_symbols=False):
         """
@@ -379,12 +440,12 @@ class StructureAnalyzer(object):
         self.set_chemical_symbols(zip(*data)[0])
         self.set_scaled_positions(zip(*data)[1])
         if sorted_by_symbols:
-            self = self.sort_by_symbols(order=order)
+            self.sort_by_symbols(order=order)
         self._atoms._symbols_to_numbers()
         self._atoms._symbols_to_masses()
         return self
 
-    def sort_by_symbols(self, order=None):
+    def sort_by_symbols(self, order=None, atomic_properties=None):
         """Combine the same chemical symbols.
 
         Positions are sorted by the combined chemical symbols.
@@ -393,13 +454,25 @@ class StructureAnalyzer(object):
         positions = self._atoms.get_scaled_positions()
         if order is None:
             order = list(symbols)
-        data = zip(symbols, positions)
+
+        if atomic_properties is None:
+            data = zip(symbols, positions)
+        else:
+            data = zip(symbols, positions, *atomic_properties.values())
+
         data = sorted(data, key=lambda x: order.index(x[0]))
         self.set_chemical_symbols(zip(*data)[0])
         self.set_scaled_positions(zip(*data)[1])
         self._atoms._symbols_to_numbers()
         self._atoms._symbols_to_masses()
-        return self
+
+        if atomic_properties is None:
+            atomic_properties_sorted = None
+        else:
+            atomic_properties_sorted = {
+                k: v for k, v in zip(atomic_properties.keys(), zip(*data)[2:])}
+
+        return atomic_properties_sorted
 
     def get_dictionary(self):
         return self._dictionary
@@ -440,7 +513,7 @@ class StructureAnalyzer(object):
         nopr = len(rotations)
         mappings = -1 * np.ones((nopr, natoms), dtype=int)
         for iopr, (r, t) in enumerate(zip(rotations, translations)):
-            mappings[iopr] = self.extract_mapping_for_symopr(r, t, prec)
+            mappings[iopr] = self.extract_mapping_for_symopr(r, t, prec)[0]
 
         if -1 in mappings:
             print("ERROR: {}".format(__name__))
@@ -481,10 +554,10 @@ class StructureAnalyzer(object):
         chemical_symbols = self._atoms.get_chemical_symbols()
         transformed_scaled_positions = (
             self.extract_transformed_scaled_positions(rotation, translation))
-        mapping = self.extract_mapping_for_atoms(
+        mapping, diff_positions = self.extract_mapping_for_atoms(
             chemical_symbols, transformed_scaled_positions, prec)
 
-        return mapping
+        return mapping, diff_positions
 
     def extract_mapping_for_atoms(self, symbols_new, positions_new, prec=1e-6):
         """
@@ -497,21 +570,24 @@ class StructureAnalyzer(object):
                 Indices are for new numbers and contents are for old ones.
         """
         natoms = self._atoms.get_number_of_atoms()
-        symbols_old = np.array(self._atoms.get_chemical_symbols())
+        symbols_old = self._atoms.get_chemical_symbols()
         positions_old = self._atoms.get_scaled_positions()
 
-        diff = positions_new[:, None, :] - positions_old[None, :, :]
-        wrapped_dpos = diff - np.rint(diff)
-        tmp, mapping = np.where(np.all(np.abs(wrapped_dpos) < prec, axis=2))
+        mapping = -1 * np.ones(natoms, dtype=int)
+        diff_positions = np.zeros((natoms, 3), dtype=int)
+        for iatoms, sp_trn in enumerate(positions_new):
+            for jatoms, sp_orig in enumerate(positions_old):
+                if symbols_new[iatoms] != symbols_old[jatoms]:
+                    continue
+                diff = sp_trn - sp_orig
+                wrapped_dpos = diff - np.rint(diff) 
 
-        # Guarantee one-to-one correspondence
-        if not np.array_equal(tmp, np.arange(natoms, dtype=int)):
-            raise ValueError('Mapping is failed.')
+                if (np.abs(wrapped_dpos) < prec).all():
+                    mapping[iatoms] = jatoms
+                    diff_positions[iatoms] = np.rint(diff).astype(int)
+                    break
 
-        if not np.array_equal(symbols_new, symbols_old[mapping]):
-            raise ValueError('Symbols do not correspond.')
-
-        return mapping
+        return mapping, diff_positions
 
 
 def _get_matrix(matrix):
