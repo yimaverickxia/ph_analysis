@@ -347,10 +347,13 @@ class StructureAnalyzer(object):
         self.set_scaled_positions(scaled_positions)
         return self
 
-    def wrap_into_cell(self):
-        scaled_positions = self.get_atoms().get_scaled_positions()
-        scaled_positions -= np.floor(scaled_positions)
-        self.set_scaled_positions(scaled_positions)
+    def wrap(self, center=(0.5, 0.5, 0.5)):
+        fractional = self._atoms.get_scaled_positions()
+        shift = np.array(center) - (0.5, 0.5, 0.5)
+        fractional -= shift
+        fractional -= np.floor(fractional)
+        fractional += shift
+        self.set_scaled_positions(fractional)
         return self
 
     def set_cell(self, cell):
@@ -519,7 +522,6 @@ class StructureAnalyzer(object):
             print("ERROR: {}".format(__name__))
             print("Some atoms are not mapped by some symmetry operations.")
             raise ValueError
-            sys.exit(1)
 
         return mappings
 
@@ -568,6 +570,8 @@ class StructureAnalyzer(object):
         Return:
             mapping (n integral array):
                 Indices are for new numbers and contents are for old ones.
+                mapping[i] == j means that the i-th atom moves to the position
+                of the j-th atom.
         """
         natoms = self._atoms.get_number_of_atoms()
         symbols_old = self._atoms.get_chemical_symbols()
