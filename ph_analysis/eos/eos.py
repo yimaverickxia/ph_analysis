@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
+import numpy as np
 from phonopy.qha.eos import get_eos
 
 __author__ = 'Yuji Ikeda'
@@ -32,6 +33,18 @@ class EOSVinet(EOS):
     @staticmethod
     def ev(volume, *p):
         return get_eos('vinet')(volume, *p)
+
+    @staticmethod
+    def pv(volume, *p):
+        x = (volume / p[3]) ** (1.0 / 3)
+        xi = 3.0 / 2 * (p[2] - 1)
+        return 3 * p[1] / (x ** 2) * (1 - x) * np.exp(xi * (1 - x))
+
+    @staticmethod
+    def bv(volume, *p):
+        x = (volume / p[3]) ** (1.0 / 3)
+        xi = 3.0 / 2 * (p[2] - 1)
+        return p[1] * ((2 - x) / (x ** 2) + xi * (1 - x) / x) * np.exp(xi * (1 - x))
 
 
 class EOSBM2(EOS):
