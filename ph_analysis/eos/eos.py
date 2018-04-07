@@ -69,6 +69,20 @@ class EOSBM3(EOS):
     def ev(volume, *p):
         return get_eos('birch_murnaghan')(volume, *p)
 
+    @staticmethod
+    def pv(volume, *p):
+        x = (p[3] / volume)
+        f = (x ** (2. / 3.) - 1.) * 0.5
+        c3 = 9. / 2. * p[1] * (p[2] - 4.)
+        return EOSBM2.pv(volume, *p) + c3 * f ** 2 * x ** (5. / 3.)
+
+    @staticmethod
+    def bv(volume, *p):
+        x = (p[3] / volume)
+        f = (x ** (2. / 3.) - 1.) * 0.5
+        c3 = 9. / 2. * p[1] * (p[2] - 4.)
+        return EOSBM2.bv(volume, *p) + c3 / 3. * f * (9. * f + 2.) * x ** (5. / 3.)
+
 
 class EOSMurnaghan(EOS):
     @staticmethod

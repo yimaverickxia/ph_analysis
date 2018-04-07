@@ -9,7 +9,7 @@ from ph_analysis.eos.eos import EOSFactory
 eos_names = [
     'Vinet',
     'BM2',
-    # 'BM3',
+    'BM3',
     # 'Murnaghan',
 ]
 
