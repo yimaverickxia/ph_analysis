@@ -60,18 +60,18 @@ class StructureAnalyzer(object):
             sigma=0.1,
             xmin=0.0,
             xmax=3.0,
-            xpitch=0.01):
+            xpitch=0.01,
+            dim=2):
         from ph_unfolder.analysis.smearing import Smearing
 
-        self.generate_supercell(dim=2)
+        self.generate_supercell(dim=dim)
 
-        print("Warning: this method is under developping!")
+        print("Warning: this method is under development!")
         # TODO(ikeda): Consider atoms over boundaries
         atoms = self._atoms
         cell = atoms.get_cell()
         natoms = atoms.get_number_of_atoms()
         density = natoms / np.linalg.det(cell)
-        scaled_positions = atoms.get_scaled_positions()
         print("Calculating distance matrix:", end="")
         self.generate_distance_matrix()
         print(" Finished.")
@@ -117,33 +117,32 @@ class StructureAnalyzer(object):
         return distances, scaled_distances
 
     def generate_distance_matrix(self):
+        dm, diffs = self._create_distance_matrix_expanded()
+        self._distance_matrix = dm[..., 0]
+        self._scaled_distances = diffs[..., 0, :]
+        return self
 
+    def _create_distance_matrix_expanded(self):
         cell = self._atoms.get_cell()
         scaled_positions = self._atoms.get_scaled_positions()
-        number_of_atoms = self._atoms.get_number_of_atoms()
 
         expansion = range(-1, 2)
-        distance_matrix = np.zeros((number_of_atoms, number_of_atoms))
-        distance_matrix *= np.nan  # initialization
-        scaled_distances = np.zeros((number_of_atoms, number_of_atoms, 3))
-        scaled_distances *= np.nan  # initialization
-        for i1, p1 in enumerate(scaled_positions):
-            for i2, p2 in enumerate(scaled_positions):
-                distance = 100000  # np.inf
-                for addition in itertools.product(expansion, repeat=3):
-                    scaled_distance_new = p2 - p1
-                    scaled_distance_new -= np.rint(scaled_distance_new)
-                    scaled_distance_new += addition
-                    distance_new = np.linalg.norm(
-                        np.dot(cell.T, scaled_distance_new))
-                    if distance > distance_new:
-                        distance = distance_new
-                        scaled_distance = scaled_distance_new
-                distance_matrix[i1, i2] = distance
-                scaled_distances[i1, i2] = scaled_distance
-        self._distance_matrix = distance_matrix
-        self._scaled_distances = scaled_distances
-        return self
+        additions = list(itertools.product(expansion, repeat=3))
+
+        diffs = scaled_positions[None, :, :] - scaled_positions[:, None, :]
+        diffs -= np.rint(diffs)
+        diffs = diffs[:, :, None, :] + additions
+
+        dm = np.linalg.norm(np.dot(diffs, cell), axis=-1)
+        indices = np.argsort(dm)
+
+        tmp = np.indices(dm.shape)
+        dm = dm[tmp[0], tmp[1], indices]
+
+        tmp = np.indices(diffs.shape)
+        diffs = diffs[tmp[0], tmp[1], indices[..., None]]
+
+        return dm, diffs
 
     def write_properties(self, precision=16):
         width = precision + 6
@@ -503,8 +502,8 @@ class StructureAnalyzer(object):
         volume = volume_per_atom * self._atoms.get_number_of_atoms()
         return self.change_volume(volume)
 
-    def get_symmetry_dataset(self):
-        return Symmetry(self._atoms).get_dataset()
+    def get_symmetry_dataset(self, *args, **kwargs):
+        return Symmetry(self._atoms, *args, **kwargs).get_dataset()
 
     def get_mappings_for_symops(self, prec=1e-6):
         """Get mappings for symmetry operations."""
