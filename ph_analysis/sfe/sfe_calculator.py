@@ -17,6 +17,10 @@ def get_sfe2(fcc, hcp, dhcp, area):
     return sfe
 
 
+def get_tbe2(fcc, hcp, dhcp, area):
+    return 2.0 * (dhcp - fcc) / area
+
+
 def get_area_from_volume_per_atom(volume_per_atom):
     a = (volume_per_atom * 4) ** (1.0 / 3.0)
     bond_length = a * np.sqrt(2.0) * 0.5
