@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-import sys
 import argparse
 import numpy as np
 from fractions import Fraction
 from phonopy.structure.atoms import atom_data, symbol_map
 from vasp.poscar import Poscar
 from primitive_axis import PrimitiveAxis
-from band_path import BandPath
+from .band_path import BandPath
 
 
 phonopy_conf_order = [
