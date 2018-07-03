@@ -16,7 +16,7 @@ __author__ = "Yuji Ikeda"
 
 
 class FiniteDisplacer(object):
-    def __init__(self, directory_data, dim, distance, thrown_file):
+    def __init__(self, directory_data, dim, distance, thrown_file=None):
         self._directory_data = directory_data
         self._dim = dim
         self._distance = distance
@@ -55,8 +55,10 @@ class FiniteDisplacer(object):
         shutil.copy2(directory_data + '/KPOINTS', 'KPOINTS')
         shutil.copy2(directory_data + '/POTCAR', 'POTCAR')
         shutil.copy2(directory_data + '/INCAR', 'INCAR')
-        shutil.copy2(directory_data + '/CHGCAR', 'CHGCAR')
-        shutil.copy2(directory_data + '/' + thrown_file, thrown_file)
+        if self._dim == [1, 1, 1]:
+            shutil.copy2(directory_data + '/CHGCAR', 'CHGCAR')
+        if thrown_file is not None:
+            shutil.copy2(directory_data + '/' + thrown_file, thrown_file)
 
     def analyze_chgcar(self):
         """Analyze CHGCAR
@@ -151,7 +153,8 @@ class FiniteDisplacer(object):
             shutil.copy2('../INCAR'         , '.')
             shutil.copy2('../POTCAR'        , '.')
             shutil.copy2('../KPOINTS'       , '.')
-            shutil.copy2('../' + thrown_file, '.')
+            if thrown_file is not None:
+                shutil.copy2('../' + thrown_file, '.')
             if os.path.exists('../CHGCAR'):
                 os.symlink('../CHGCAR', 'CHGCAR')
             os.chdir(root)
