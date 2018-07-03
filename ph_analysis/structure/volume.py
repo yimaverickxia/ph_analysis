@@ -48,7 +48,7 @@ class Volume(object):
 
     def run(self):
         self.generate_atomic_volume()
-        self.write_atomic_volume()
+        self.write()
 
     def _get_distances1(self, rpos):
         cell = self._atoms.get_cell()
@@ -61,44 +61,15 @@ class Volume(object):
     def generate_atomic_volume(self, prec=1e-6):
         raise NotImplementedError
 
-    def write_atomic_volume(self):
+    def write(self):
         filename = self._create_filename()
-        data = self._data
-
-        properties = ['volume']
-
         with open(filename, "w") as f:
-            f.write(self._create_header())
-            f.write('{:<22s}{:<18s}'.format('#', 'Voronoi_volume'))
-            f.write('\n')
-            for i, x in data.iterrows():
-                f.write('atom ')
-                f.write('{:11d}'.format(x['index']))
-                f.write(' {:5s}'.format(x['symbol']))
-                f.write('{:18.12f}'.format(x['volume']))
-                f.write('\n')
-
-            f.write('\n')
-
-            # Write statistics for all atoms
-            data_stat = create_data_stat(data, 'atom', properties)
-            for k0, x in data_stat.iterrows():
-                for k1, v in x.iteritems():
-                    f.write('{:16}'.format(k1[1]))
-                    f.write(' {:5s}'.format(k0))
-                    f.write('{:18.12f}'.format(v))
-                    f.write('\n')
-                f.write('\n')
-
-            # Write statistics for each symbol
-            data_stat = create_data_stat(data, 'symbol', properties)
-            for k0, x in data_stat.iterrows():
-                for k1, v in x.iteritems():
-                    f.write('{:16s}'.format(k1[1]))
-                    f.write(' {:5s}'.format(k0))
-                    f.write('{:18.12f}'.format(v))
-                    f.write('\n')
-                f.write('\n')
+            self._data.to_string(
+                f,
+                columns=['symbol', 'volume'],
+                formatters=['{:6s}'.format, '{:18.12f}'.format],
+                index=False,
+            )
 
     def _create_header(self):
         raise NotImplementedError
