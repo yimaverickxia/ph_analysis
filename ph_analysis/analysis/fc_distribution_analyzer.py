@@ -83,32 +83,34 @@ class FCDistributionAnalyzer(FCAnalyzerBase):
             [rotate(fcs[i0, i1], r) for i0, i1, r in zip(i0s, i1s, rotations)]
         )
 
-        self.write(fc_symbols, fc_values, distances, filename)
+        self.write(i0s, i1s, fc_symbols, fc_values, distances, filename)
 
-    def write(self, fc_symbols, fc_values, distances, filename):
+    def write(self, i0s, i1s, fc_symbols, fc_values, distances, filename):
         with open(filename, "w") as f:
-            f.write('{:4s}'.format('e0'))
-            f.write('{:4s}'.format('e1'))
-            f.write('{:22s}'.format('distance'))
-            f.write(' ' * 4)
-            f.write('{:22s}'.format('xx'))
-            f.write('{:22s}'.format('xy'))
-            f.write('{:22s}'.format('xz'))
-            f.write('{:22s}'.format('yx'))
-            f.write('{:22s}'.format('yy'))
-            f.write('{:22s}'.format('yz'))
-            f.write('{:22s}'.format('zx'))
-            f.write('{:22s}'.format('zy'))
-            f.write('{:22s}'.format('zz'))
+            f.write('{:6s}'.format('i0'))
+            f.write('{:6s}'.format('e0'))
+            f.write('{:6s}'.format('i1'))
+            f.write('{:6s}'.format('e1'))
+            f.write('{:12s}'.format('distance'))
+            f.write('{:15s}'.format('xx'))
+            f.write('{:15s}'.format('xy'))
+            f.write('{:15s}'.format('xz'))
+            f.write('{:15s}'.format('yx'))
+            f.write('{:15s}'.format('yy'))
+            f.write('{:15s}'.format('yz'))
+            f.write('{:15s}'.format('zx'))
+            f.write('{:15s}'.format('zy'))
+            f.write('{:15s}'.format('zz'))
             f.write('\n')
-            for si, d, v in zip(fc_symbols, distances, fc_values):
-                f.write("{:4s}".format(si[0]))
-                f.write("{:4s}".format(si[1]))
-                f.write("{:22.15f}".format(d))
-                f.write(" " * 4)
+            for i0, i1, si, d, v in zip(i0s, i1s, fc_symbols, distances, fc_values):
+                f.write("{:6d}".format(i0))
+                f.write("  {:4s}".format(si[0]))
+                f.write("{:6d}".format(i1))
+                f.write("  {:4s}".format(si[1]))
+                f.write("{:12.6f}".format(d))
                 for i in range(3):
                     for j in range(3):
-                        f.write("{:22.15f}".format(v[i, j]))
+                        f.write("{:15.6f}".format(v[i, j]))
                 f.write("\n")
 
 
