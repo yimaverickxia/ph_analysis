@@ -24,6 +24,7 @@ class EOSFitting(object):
         self._volumes = np.array(volumes)
         self._energies = np.array(energies)
         self._eos_name = eos_name
+        self._parameters = OrderedDict()
 
     def fit(self) -> OrderedDict:
         volumes = self._volumes
@@ -38,13 +39,33 @@ class EOSFitting(object):
 
         fitting_error = calculate_rmse(eos, volumes, energies, popt)
 
-        d = OrderedDict()
+        d = self._parameters
         d['F0'] = eos_fit.get_energy()
         d['V0'] = eos_fit.get_volume()
         d['B0'] = eos_fit.get_bulk_modulus()
         d['Bp0'] = eos_fit.get_b_prime()
         d['F_RMSE'] = fitting_error
         d['NV'] = len(volumes)
+        self._parameters = d
 
-        return d
+    def write(self, fn):
+        d = self._parameters
+        with open(fn, 'w') as f:
+            f.write('{:20s}'.format('F0'))
+            f.write('{:20s}'.format('V0'))
+            f.write('{:20s}'.format('B0'))
+            f.write('{:20s}'.format('Bp0'))
+            f.write('{:20s}'.format('F_RMSE'))
+            f.write('{:20s}'.format('NV'))
+            f.write('\n')
 
+            f.write('{:20.9f}'.format(d['F0']))
+            f.write('{:20.9f}'.format(d['V0']))
+            f.write('{:20.9f}'.format(d['B0']))
+            f.write('{:20.9f}'.format(d['Bp0']))
+            f.write('{:20.9f}'.format(d['F_RMSE']))
+            f.write('{:20d}'.format(int(d['NV'])))
+            f.write('\n')
+
+    def get_parameters(self):
+        return self._parameters
