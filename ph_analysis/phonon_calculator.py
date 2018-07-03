@@ -23,7 +23,8 @@ class PhononCalculator(object):
                  is_partial_dos=False,
                  is_tetrahedron=False,
                  is_tprop=False,
-                 mesh=None):
+                 mesh=None,
+                 nac=None):
 
         if dim_sqs is None:
             dim_sqs = np.array([1, 1, 1])
@@ -52,6 +53,8 @@ class PhononCalculator(object):
 
         self._mesh = np.array(mesh)
 
+        self._nac = nac
+
     def set_dim_sqs(self, dim_sqs):
         self._dim_sqs = dim_sqs
 
@@ -78,15 +81,14 @@ class PhononCalculator(object):
             self.run_phonopy(conf_file)
 
     def copy_files(self):
-        directory_data = self._directory_data
-        symlink_force(directory_data + 'writefc.conf', 'writefc.conf')
-        symlink_force(directory_data + 'POSCAR', 'POSCAR')
-        symlink_force(directory_data + 'POSCAR_ideal', 'POSCAR_ideal')
-        symlink_force(directory_data + 'FORCE_CONSTANTS', 'FORCE_CONSTANTS')
+        dir_data = self._directory_data
+        symlink_force(os.path.join(dir_data, 'writefc.conf'), 'writefc.conf')
+        symlink_force(os.path.join(dir_data, 'POSCAR'), 'POSCAR')
+        symlink_force(os.path.join(dir_data, 'POSCAR_ideal'), 'POSCAR_ideal')
+        symlink_force(os.path.join(dir_data, 'FORCE_CONSTANTS'), 'FORCE_CONSTANTS')
 
     def create_phonopy_conf(self):
 
-        home = self._home
         directory_data = self._directory_data
         dim_sqs = self._dim_sqs
         variables = self._variables
@@ -110,14 +112,15 @@ class PhononCalculator(object):
             poscar_name="POSCAR",  # For getting the chemical symbols
             magmom_line=None,
             variables=variables,
+            nac=self._nac,
         )
         phonopy_conf_creator.run()
 
     def create_spg_number(self):
-        '''
+        """
         
         spg_number is used to determine the primitive axis and band paths.
-        '''
+        """
         if self._poscar_average_filename is not None:
             poscar_filename = self._poscar_average_filename
         else:
@@ -157,9 +160,11 @@ class PhononCalculator(object):
             shutil.rmtree(dir_name)
         os.mkdir(dir_name)
         os.chdir(dir_name)
-        os.symlink("../" + conf_file, conf_file)
-        os.symlink("../" + "POSCAR", "POSCAR")
-        os.symlink("../" + "FORCE_CONSTANTS", "FORCE_CONSTANTS")
+
+        for fn in [conf_file, "POSCAR", "FORCE_CONSTANTS", "BORN"]:
+            if os.path.exists(os.path.join("..", fn)):
+                os.symlink("../" + fn, fn)
+
         if os.path.exists(log_file):
             os.remove(log_file)
         time1 = time.time()
@@ -205,6 +210,7 @@ def main():
         is_tprop=args.tprop,
     )
     phonon_analyzer.run()
+
 
 if __name__ == "__main__":
     main()

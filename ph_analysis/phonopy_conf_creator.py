@@ -39,6 +39,9 @@ phonopy_conf_order = [
     "TMIN",
     "TSTEP",
     "FORCE_CONSTANTS",
+    #
+    "NAC",
+    "NAC_METHOD",
 ]
 
 
@@ -81,7 +84,8 @@ class PhonopyConfCreator(object):
                  is_primitive=False,
                  is_fct=False,
                  is_bcm=False,
-                 variables=None):
+                 variables=None,
+                 nac=None):
         if variables is None:
             self._dos_input = {
                 "f_min" : -10.0 ,  # THz
@@ -113,6 +117,7 @@ class PhonopyConfCreator(object):
         self._prior_primitive_axis = prior_primitive_axis
         self._mode_mean_masses = mode_mean_masses
         self._magmom_line = magmom_line
+        self._nac = nac
 
         self._dim = get_dim('writefc.conf')
 
@@ -138,6 +143,10 @@ class PhonopyConfCreator(object):
 
         if self._is_average_mass:
             self.create_average_masses(self._poscar)
+
+        if self._nac is not None:
+            self._dictionary["NAC"] = ".TRUE."
+            self._dictionary["NAC_METHOD"] = self._nac  # "GONZE" or "WANG"
 
         self.generate_dictionary_dictionary()
 
